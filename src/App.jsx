@@ -1,8 +1,25 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, Component } from 'react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import './App.css';
+
+// ── ErrorBoundary ────────────────────────────────────────
+class ErrorBoundary extends Component {
+  state = { crashed: false };
+  static getDerivedStateFromError() { return { crashed: true }; }
+  render() {
+    if (this.state.crashed) return (
+      <div className="error-boundary">
+        <p>예기치 못한 오류가 발생했습니다.</p>
+        <button className="retry-btn" onClick={() => this.setState({ crashed: false })}>
+          다시 시도
+        </button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
 // ── Gemini ──────────────────────────────────────────────
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
@@ -259,9 +276,7 @@ export default function App() {
   const [error,      setError]      = useState('');
   const pdfRef = useRef(null);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!topic.trim()) return;
+  async function generate() {
     setLoading(true);
     setResult(null);
     setError('');
@@ -273,6 +288,12 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!topic.trim()) return;
+    await generate();
   }
 
   async function handlePdf() {
@@ -287,6 +308,7 @@ export default function App() {
   }
 
   return (
+    <ErrorBoundary>
     <div className="app">
       <header className="app-header">
         <div className="badge">Powered by Gemini 2.5 Flash</div>
@@ -326,7 +348,14 @@ export default function App() {
         </button>
       </form>
 
-      {error && <div className="error-box">{error}</div>}
+      {error && (
+        <div className="error-box">
+          <span>{error}</span>
+          <button className="retry-btn" type="button" onClick={generate} disabled={loading}>
+            다시 시도
+          </button>
+        </div>
+      )}
 
       {loading && (
         <div className="loading-card">
@@ -398,5 +427,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 }
