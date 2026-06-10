@@ -333,6 +333,8 @@ export default function App() {
           ))}
         </div>
 
+        <div className="form-divider" />
+
         <div className="textarea-wrap">
           <textarea
             value={topic}
